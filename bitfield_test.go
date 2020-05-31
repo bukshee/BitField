@@ -98,55 +98,74 @@ func Test2(t *testing.T) {
 }
 
 func TestPrivate1(t *testing.T) {
-	given := [...][2]int{
-		{67, -2}, {121, 121}, {3, -10}, {0, 2}, {0, 4},
-	}
-	expected := [...]int{
-		65, 0, 2, 0, 0,
+	tests := []struct {
+		size     int // input
+		pos      int //input
+		expected int //output
+	}{
+		{67, -2, 65},
+		{121, 121, 0},
+		{3, -10, 2},
+		{0, 2, 0},
+		{0, 4, 0},
 	}
 
-	for i, w := range given {
-		res := New(w[0]).posNormalize(w[1])
-		if res == expected[i] {
+	for _, tt := range tests {
+		res := New(tt.size).posNormalize(tt.pos)
+		if res == tt.expected {
 			continue
 		}
-		t.Errorf("New(%d).posNormalize(%d) should map to %d. Got: %d", w[0], w[1], expected[i], res)
+		t.Errorf("New(%d).posNormalize(%d) should map to %d. Got: %d",
+			tt.size, tt.pos, tt.expected, res)
 	}
 }
 
 func TestPrivate2(t *testing.T) {
-	given := [...][2]int{
-		{65, 64}, {3, -1}, {65, -1},
+	tests := []struct {
+		size        int // input
+		offset      int // input
+		expectedIx  int // output
+		expectedPos int // output
+	}{
+		{65, 64, 1, 0},
+		{3, -1, 0, 2},
+		{65, -1, 1, 0},
 	}
-	expected := [...][2]int{
-		{1, 0}, {0, 2}, {1, 0},
-	}
-	for i, w := range given {
-		ix, p := New(w[0]).posToOffset(w[1])
-		if ix == expected[i][0] && p == expected[i][1] {
+
+	for _, tt := range tests {
+		ix, p := New(tt.size).posToOffset(tt.offset)
+		if ix == tt.expectedIx && p == tt.expectedPos {
 			continue
 		}
 		t.Errorf("New(%d).posToOffset(%d) should map to [%d,%d]. Got: [%d,%d]",
-			w[0], w[1], expected[i][0], expected[i][1], ix, p)
+			tt.size, tt.offset, tt.expectedIx, tt.expectedPos, ix, p)
 	}
 }
 
 func TestShift(t *testing.T) {
-	given := [...][2]int{
-		{100, 54}, {129, -3}, {6, 2}, {6, 0}, {0, 5}, {193, 192},
-		{6, 6}, {6, -6}, {193, -192},
-		{193, -1}, {191, -100},
-	}
-	expected := [...]int{
-		46, 126, 4, 6, 0, 1,
-		0, 0, 1,
-		192, 91,
+	tests := []struct {
+		size     int
+		shift    int
+		expected int
+	}{
+		{100, 54, 46},
+		{129, -3, 126},
+		{6, 2, 4},
+		{6, 0, 6},
+		{0, 5, 0},
+		{193, 192, 1},
+		{6, 6, 0},
+		{6, -6, 0},
+		{193, -192, 1},
+		{193, -1, 192},
+		{191, -100, 91},
 	}
 
-	for i, in := range given {
-		c := New(in[0]).SetAll().Shift(in[1]).OnesCount()
-		if c != expected[i] {
-			t.Errorf("%d: Shift(%d) had %d bits set, however %d was expected", in[0], in[1], c, expected[i])
+	for _, tt := range tests {
+		c := New(tt.size).SetAll().Shift(tt.shift).OnesCount()
+		if c != tt.expected {
+			t.Errorf("%d: Shift(%d) had %d bits set, however %d was expected",
+				tt.size, tt.shift, c, tt.expected)
 		}
 	}
 }
