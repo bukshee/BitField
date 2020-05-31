@@ -5,6 +5,9 @@ will get the modulo treatment, so Get(len) will return the 0th bit, Get(-1) will
 return the last bit: Get(len-1)
 
 Most methods do not modify the underlying bitfield but create a new and return that.
+You can change this behaviour by calling .Mut() method. In this case all methods
+explicitely marked as 'Mutable.' will be modified in-place. This reduced allocations
+(for cases where speed does matter).
 */
 package bitfield
 
@@ -12,12 +15,14 @@ import (
 	bf64 "github.com/bukshee/bitfield64"
 )
 
+// bitFieldData is a slice of BitField64-s.
 type bitFieldData []bf64.BitField64
 
-// BitField is a slice of BitField64-s.
+// BitField is a flexible size version of BitField64.
 type BitField struct {
-	data bitFieldData
-	len  int
+	data    bitFieldData
+	len     int
+	mutable bool
 }
 
 // New creates a slice of BitField64 and returns it. Returns nil if len<0
@@ -26,9 +31,18 @@ func New(len int) *BitField {
 		return nil
 	}
 	return &BitField{
-		data: make(bitFieldData, 1+len/64),
-		len:  len,
+		data:    make(bitFieldData, 1+len/64),
+		len:     len,
+		mutable: false,
 	}
+}
+
+// Mut sets the mutable flag. This can reduce number of copying
+// if execution time is important. Methods where description contains
+// 'Mutable.' will modify content in-place.
+func (bf *BitField) Mut() *BitField {
+	bf.mutable = true
+	return bf
 }
 
 // Resize resizes the bitfield to newLen in size.
@@ -45,6 +59,15 @@ func (bf *BitField) Resize(newLen int) *BitField {
 		ret.clearEnd()
 	}
 	return ret
+}
+
+// mClone is the mutable-clone: if Mut() set, it returns bf,
+// otherwise bahaves as Clone()
+func (bf *BitField) mClone() *BitField {
+	if bf.mutable {
+		return bf
+	}
+	return bf.Clone()
 }
 
 // Clone creates a copy of the bitfield and returns it
@@ -90,9 +113,9 @@ func (bf *BitField) clearEnd() *BitField {
 	return bf
 }
 
-// Set sets multiple bits at once
+// Set sets the bit(s) at position pos. Mutable.
 func (bf *BitField) Set(pos ...int) *BitField {
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for _, p := range pos {
 		index, offset := bf.posToOffset(p)
 		ret.data[index] = ret.data[index].Set(offset)
@@ -100,18 +123,18 @@ func (bf *BitField) Set(pos ...int) *BitField {
 	return ret
 }
 
-// SetAll sets all bits to 1
+// SetAll sets all bits to 1. Mutable.
 func (bf *BitField) SetAll() *BitField {
-	ret := New(bf.Len())
+	ret := bf.mClone()
 	for i := range ret.data {
 		ret.data[i] = ret.data[i].SetAll()
 	}
 	return ret.clearEnd()
 }
 
-// Clear clears multiple bits at once
+// Clear clears the bit(s) at position pos. Mutable.
 func (bf *BitField) Clear(pos ...int) *BitField {
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for _, p := range pos {
 		index, offset := bf.posToOffset(p)
 		bf.data[index] = bf.data[index].Clear(offset)
@@ -119,9 +142,9 @@ func (bf *BitField) Clear(pos ...int) *BitField {
 	return ret
 }
 
-// ClearAll sets all bits to 1
+// ClearAll sets all bits to 1. Mutable.
 func (bf *BitField) ClearAll() *BitField {
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for i := range ret.data {
 		ret.data[i] = ret.data[i].ClearAll()
 	}
@@ -134,9 +157,9 @@ func (bf *BitField) Get(pos int) bool {
 	return bf.data[index].Get(offset)
 }
 
-// Flip inverts the bit at position pos
+// Flip inverts the bit(s) at position pos. Mutable.
 func (bf *BitField) Flip(pos ...int) *BitField {
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for _, p := range pos {
 		index, offset := ret.posToOffset(p)
 		ret.data[index] = ret.data[index].Flip(offset)
@@ -153,45 +176,45 @@ func (bf *BitField) OnesCount() int {
 	return count
 }
 
-// And does a binary AND with bfOther.
+// And does a binary AND with bfOther. Returns nil if lengths differ. Mutable.
 func (bf *BitField) And(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
 		return nil
 	}
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for i := range ret.data {
 		ret.data[i] = bf.data[i].And(bfOther.data[i])
 	}
 	return ret
 }
 
-// Or does a binary OR with bfOther.
+// Or does a binary OR with bfOther. Returns nil if lengths differ. Mutable.
 func (bf *BitField) Or(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
 		return nil
 	}
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for i := range ret.data {
 		ret.data[i] = bf.data[i].Or(bfOther.data[i])
 	}
 	return ret
 }
 
-// Not does a binary NOT (inverts all bits).
+// Not does a binary NOT (inverts all bits). Mutable.
 func (bf *BitField) Not() *BitField {
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for i := range bf.data {
 		ret.data[i] = bf.data[i].Not()
 	}
 	return ret.clearEnd()
 }
 
-// Xor does a binary XOR with bfOther.
+// Xor does a binary XOR with bfOther. Returns nil if lengths differ. Mutable.
 func (bf *BitField) Xor(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
 		return nil
 	}
-	ret := bf.Clone()
+	ret := bf.mClone()
 	for i := range bf.data {
 		ret.data[i] = bf.data[i].Xor(bfOther.data[i])
 	}

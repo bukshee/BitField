@@ -253,8 +253,22 @@ func TestRotate(t *testing.T) {
 	}
 }
 
+func TestMut(t *testing.T) {
+	a := New(65).Mut()
+	a.SetAll().Clear(0, -1).Flip(3, 4)
+	if a.OnesCount() != 61 {
+		t.Error("should be 61")
+	}
+
+	a = New(65).Mut().SetAll()
+	a.Xor(a)
+	if a.OnesCount() != 0 {
+		t.Error("should be 0")
+	}
+}
+
 func Benchmark1(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		New(365).SetAll()
+		New(365).Mut().SetAll()
 	}
 }
