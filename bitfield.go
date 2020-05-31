@@ -77,9 +77,9 @@ func (bf *BitField) clearEnd() *BitField {
 	const n = 64
 	index, offset := bf.Len()/n, bf.Len()%n
 	// point to after the last element:
-	for i := offset; i < n; i++ {
-		bf.data[index] = bf.data[index].Clear(i)
-	}
+	// offset points to after the last element
+	delta := n - offset
+	bf.data[index] = bf.data[index].Shift(delta).Shift(-delta)
 	return bf
 }
 

@@ -220,3 +220,9 @@ func TestRotate(t *testing.T) {
 		}
 	}
 }
+
+func Benchmark1(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		New(65).SetAll()
+	}
+}
