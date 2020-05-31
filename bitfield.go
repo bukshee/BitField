@@ -3,6 +3,8 @@ Package bitfield is slice of bitfield64-s to make it possible to store more
 than 64 bits. Most functions are chainable, positions outside the [0,len) range
 will get the modulo treatment, so Get(len) will return the 0th bit, Get(-1) will
 return the last bit: Get(len-1)
+
+Most methods do not modify the underlying bitfield but create a new and return that.
 */
 package bitfield
 
@@ -18,16 +20,15 @@ type BitField struct {
 	len  int
 }
 
-// New creates a slice of BitField64 and returns it. Returns nil if len<=0
+// New creates a slice of BitField64 and returns it. Returns nil if len<0
 func New(len int) *BitField {
-	if len <= 0 {
-		len = 0
+	if len < 0 {
+		return nil
 	}
-	ret := BitField{
+	return &BitField{
 		data: make(bitFieldData, 1+len/64),
 		len:  len,
 	}
-	return &ret
 }
 
 // Resize resizes the bitfield to newLen in size.
@@ -35,14 +36,21 @@ func New(len int) *BitField {
 // If newLen < Len() bits are lost at the end.
 // If newLen > Len() the newly added bits will be zeroed.
 func (bf *BitField) Resize(newLen int) *BitField {
-	if newLen < 0 {
-		newLen = 0
-	}
 	ret := New(newLen)
+	if newLen <= 0 {
+		return ret
+	}
 	copy(ret.data, bf.data)
 	if newLen < bf.len {
 		ret.clearEnd()
 	}
+	return ret
+}
+
+// Clone creates a copy of the bitfield and returns it
+func (bf *BitField) Clone() *BitField {
+	ret := New(bf.len)
+	copy(ret.data, bf.data)
 	return ret
 }
 
@@ -69,10 +77,10 @@ func (bf *BitField) posToOffset(pos int) (index int, offset int) {
 	return
 }
 
-// clearEnd zeroes the bits beyond Len(): the underlying BitField64
-// allocates space in 64bit increments and Len() might be smaller than
-// the space allocated: it needs to be kept zeroed at all times to be
-// consistent
+// clearEnd zeroes the bits beyond Len() in-place
+// The underlying BitField64 allocates space in 64bit increments
+// and Len() might be smaller than the space allocated: it needs to be
+// kept zeroed at all times to be consistent
 func (bf *BitField) clearEnd() *BitField {
 	const n = 64
 	index, offset := bf.Len()/n, bf.Len()%n
@@ -82,50 +90,42 @@ func (bf *BitField) clearEnd() *BitField {
 	return bf
 }
 
-// Set sets a bit to 1 at position pos inside the bit-field
-func (bf *BitField) Set(pos int) *BitField {
-	index, offset := bf.posToOffset(pos)
-	bf.data[index] = bf.data[index].Set(offset)
-	return bf
-}
-
-// SetMul sets multiple bits at once
-func (bf *BitField) SetMul(pos ...int) *BitField {
+// Set sets multiple bits at once
+func (bf *BitField) Set(pos ...int) *BitField {
+	ret := bf.Clone()
 	for _, p := range pos {
-		bf.Set(p)
+		index, offset := bf.posToOffset(p)
+		ret.data[index] = ret.data[index].Set(offset)
 	}
-	return bf
+	return ret
 }
 
 // SetAll sets all bits to 1
 func (bf *BitField) SetAll() *BitField {
-	for i := range bf.data {
-		bf.data[i] = bf.data[i].SetAll()
+	ret := New(bf.Len())
+	for i := range ret.data {
+		ret.data[i] = ret.data[i].SetAll()
 	}
-	return bf.clearEnd()
+	return ret.clearEnd()
 }
 
-// Clear clears the bit at position pos (sets to 0) inside the bit-field
-func (bf *BitField) Clear(pos int) *BitField {
-	index, offset := bf.posToOffset(pos)
-	bf.data[index] = bf.data[index].Clear(offset)
-	return bf
-}
-
-// ClearMul clears multiple bits at once
-func (bf *BitField) ClearMul(pos ...int) *BitField {
+// Clear clears multiple bits at once
+func (bf *BitField) Clear(pos ...int) *BitField {
+	ret := bf.Clone()
 	for _, p := range pos {
-		bf.Clear(p)
+		index, offset := bf.posToOffset(p)
+		bf.data[index] = bf.data[index].Clear(offset)
 	}
-	return bf
+	return ret
 }
 
 // ClearAll sets all bits to 1
 func (bf *BitField) ClearAll() *BitField {
-	for i := range bf.data {
-		bf.data[i] = bf.data[i].ClearAll()
+	ret := bf.Clone()
+	for i := range ret.data {
+		ret.data[i] = ret.data[i].ClearAll()
 	}
-	return bf
+	return ret
 }
 
 // Get returns the bit (as a boolean) at position pos
@@ -135,10 +135,13 @@ func (bf *BitField) Get(pos int) bool {
 }
 
 // Flip inverts the bit at position pos
-func (bf *BitField) Flip(pos int) *BitField {
-	index, offset := bf.posToOffset(pos)
-	bf.data[index] = bf.data[index].Flip(offset)
-	return bf
+func (bf *BitField) Flip(pos ...int) *BitField {
+	ret := bf.Clone()
+	for _, p := range pos {
+		index, offset := ret.posToOffset(p)
+		ret.data[index] = ret.data[index].Flip(offset)
+	}
+	return ret
 }
 
 // OnesCount returns the number of bits set
@@ -151,48 +154,48 @@ func (bf *BitField) OnesCount() int {
 }
 
 // And does a binary AND with bfOther.
-// Modifies the bitfield in place and returns it.
 func (bf *BitField) And(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
-		return bf
+		return nil
 	}
-	for i := range bf.data {
-		bf.data[i] = bf.data[i].And(bfOther.data[i])
+	ret := bf.Clone()
+	for i := range ret.data {
+		ret.data[i] = bf.data[i].And(bfOther.data[i])
 	}
-	return bf
+	return ret
 }
 
 // Or does a binary OR with bfOther.
-// Modifies the bitfield in place and returns it.
 func (bf *BitField) Or(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
-		return bf
+		return nil
 	}
-	for i := range bf.data {
-		bf.data[i] = bf.data[i].Or(bfOther.data[i])
+	ret := bf.Clone()
+	for i := range ret.data {
+		ret.data[i] = bf.data[i].Or(bfOther.data[i])
 	}
-	return bf
+	return ret
 }
 
 // Not does a binary NOT (inverts all bits).
-// Modifies the bitfield in place and returns it.
 func (bf *BitField) Not() *BitField {
+	ret := bf.Clone()
 	for i := range bf.data {
-		bf.data[i] = bf.data[i].Not()
+		ret.data[i] = bf.data[i].Not()
 	}
-	return bf.clearEnd()
+	return ret.clearEnd()
 }
 
 // Xor does a binary XOR with bfOther.
-// Modifies the bitfield in place and returns it.
 func (bf *BitField) Xor(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
-		return bf
+		return nil
 	}
+	ret := bf.Clone()
 	for i := range bf.data {
-		bf.data[i] = bf.data[i].Xor(bfOther.data[i])
+		ret.data[i] = bf.data[i].Xor(bfOther.data[i])
 	}
-	return bf.clearEnd()
+	return ret.clearEnd()
 }
 
 // Equal tells if two bitfields are equal or not
@@ -208,99 +211,82 @@ func (bf *BitField) Equal(bfOther *BitField) bool {
 	return true
 }
 
-// Clone creates a copy of the bitfield and returns it
-func (bf *BitField) Clone() *BitField {
-	bfNew := BitField{
-		data: make(bitFieldData, len(bf.data), cap(bf.data)),
-		len:  bf.len,
-	}
-	copy(bfNew.data, bf.data)
-	return &bfNew
-}
-
-// Copy deprecated, use Clone instead: just a rename
-func (bf *BitField) Copy() *BitField {
-	return bf.Clone()
-}
-
-// BitCopy copies the content of the bitfield to dest.
-// Returns false if Len()-s differ, true otherwise.
-func (bf *BitField) BitCopy(dest *BitField) bool {
-	if bf.Len() != dest.Len() {
-		return false
-	}
-	copy(dest.data, bf.data)
-	return true
-}
-
-// Shift shifts the bitfield by count bits in place and returns it.
+// Shift shifts the bitfield by count bits and returns it.
 // If count is positive it shifts towards higher bit positions;
 // If negative it shifts towards lower bit positions.
 // Bits exiting at one end are discarded;
 // bits entering at the other end are zeroed.
 func (bf *BitField) Shift(count int) *BitField {
-	if count == 0 {
-		return bf
-	}
 	if count <= -bf.Len() || count >= bf.Len() {
 		return bf.ClearAll()
 	}
 
+	ret := bf.Clone()
+
 	const n = 64
-	if count > 0 {
+	switch {
+	case count == 0:
+		return ret
+	case count > 0:
 		ix, delta := count/n, count%n
-		for i := len(bf.data) - 1; i >= 0; i-- {
+		for i := len(ret.data) - 1; i >= 0; i-- {
 			tmp := bf64.New()
 			if i-ix >= 0 {
-				tmp = bf.data[i-ix]
+				tmp = ret.data[i-ix]
 			}
 			a, b := tmp.Shift2(delta)
-			bf.data[i] = a
+			ret.data[i] = a
 			if i+1 < len(bf.data) {
-				bf.data[i+1] = bf.data[i+1].Or(b)
+				ret.data[i+1] = ret.data[i+1].Or(b)
 			}
 		}
-		bf.clearEnd()
-	}
-	if count < 0 {
+		ret.clearEnd()
+
+	case count < 0:
 		ix, delta := -count/n, -count%n
-		for i := 0; i < len(bf.data); i++ {
+		for i := 0; i < len(ret.data); i++ {
 			tmp := bf64.New()
-			if i+ix < len(bf.data) {
-				tmp = bf.data[i+ix]
+			if i+ix < len(ret.data) {
+				tmp = ret.data[i+ix]
 			}
 			a, b := tmp.Shift2(-delta)
-			bf.data[i] = a
+			ret.data[i] = a
 			if i > 0 {
-				bf.data[i-1] = bf.data[i-1].Or(b)
+				ret.data[i-1] = ret.data[i-1].Or(b)
 			}
 		}
 	}
-	return bf
+	return ret
 }
 
 // Mid returns counts bits from position pos as a new BitField
+// Returns nil if count<0
 func (bf *BitField) Mid(pos, count int) *BitField {
-	pos = bf.posNormalize(pos)
-	if count < 0 {
-		count = 0
+	switch {
+	case count < 0:
+		return nil
+
+	case count == 0:
+		return New(0)
+
+	default:
+		if count > bf.Len() {
+			count = bf.Len()
+		}
+		pos = bf.posNormalize(pos)
+		return bf.Shift(-pos).Resize(count)
 	}
-	return bf.Clone().Shift(-pos).Resize(count)
 }
 
 // Left returns count bits in the range of [0,count-1] as a new BitField
+// Returns nil if count<0
 func (bf *BitField) Left(count int) *BitField {
-	if count > bf.Len() {
-		count = bf.Len()
-	}
 	return bf.Mid(0, count)
 }
 
 // Right returns count bits in the range of [63-count,63] as a new BitField
+// Returns nil if count<0
 func (bf *BitField) Right(count int) *BitField {
-	if count > bf.Len() {
-		count = bf.Len()
-	}
 	return bf.Mid(bf.Len()-count, count)
 }
 
@@ -312,12 +298,13 @@ func (bf *BitField) Append(other *BitField) *BitField {
 	}
 	len := bf.Len()
 	newLen := len + other.Len()
-	ret := other.Resize(newLen).Shift(len)
-	return ret.Or(bf.Resize(newLen))
+	return other.
+		Resize(newLen).
+		Shift(len).
+		Or(bf.Resize(newLen))
 }
 
-// Rotate rotates by amount bits in-place.
-// Returns the rotated bitfield for easy chaining.
+// Rotate rotates by amount bits and returns it
 // If amount>0 it rotates towards higher bit positions,
 // otherwise it rotates towards lower bit positions.
 func (bf *BitField) Rotate(amount int) *BitField {
@@ -327,11 +314,10 @@ func (bf *BitField) Rotate(amount int) *BitField {
 	amount %= bf.Len()
 
 	if amount%bf.Len() == 0 {
-		return bf
+		return bf.Clone()
 	}
 
 	lh := bf.Left(bf.Len() - amount)
 	rh := bf.Right(amount)
-	rh.Append(lh).BitCopy(bf)
-	return bf
+	return rh.Append(lh)
 }
