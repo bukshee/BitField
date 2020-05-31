@@ -76,7 +76,6 @@ func (bf *BitField) posToOffset(pos int) (index int, offset int) {
 func (bf *BitField) clearEnd() *BitField {
 	const n = 64
 	index, offset := bf.Len()/n, bf.Len()%n
-	// point to after the last element:
 	// offset points to after the last element
 	delta := n - offset
 	bf.data[index] = bf.data[index].Shift(delta).Shift(-delta)
