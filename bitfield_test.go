@@ -265,6 +265,15 @@ func TestMut(t *testing.T) {
 	if a.OnesCount() != 0 {
 		t.Error("should be 0")
 	}
+
+	a = New(65)
+	if New(5).Copy(a) {
+		t.Error("should be false")
+	}
+	New(65).Set(0, -1).Copy(a)
+	if a.OnesCount() != 2 || !a.Get(-1) {
+		t.Error("Copy fails")
+	}
 }
 
 func Benchmark1(b *testing.B) {
