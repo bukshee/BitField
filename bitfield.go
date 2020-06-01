@@ -78,7 +78,7 @@ func (bf *BitField) Clone() *BitField {
 }
 
 // Copy copies the content of BitField bf to dest.
-// Returns true on success, false otherwise
+// Returns false if the two bitfields differ in size, true otherwise
 func (bf *BitField) Copy(dest *BitField) bool {
 	if bf.len != dest.len {
 		return false
