@@ -25,8 +25,14 @@ type BitField struct {
 	mutable bool
 }
 
-// New creates a slice of BitField64 and returns it. Returns nil if len<0
+// New creates a new BitField of length len
 func New(len int) *BitField {
+	return NewBitField(len)
+}
+
+// NewBitField creates a new BitField of length len and returns it.
+// Returns nil if len<0
+func NewBitField(len int) *BitField {
 	if len < 0 {
 		return nil
 	}
@@ -147,7 +153,7 @@ func (bf *BitField) Clear(pos ...int) *BitField {
 	ret := bf.mClone()
 	for _, p := range pos {
 		index, offset := bf.posToOffset(p)
-		bf.data[index] = bf.data[index].Clear(offset)
+		ret.data[index] = ret.data[index].Clear(offset)
 	}
 	return ret
 }
@@ -193,7 +199,7 @@ func (bf *BitField) And(bfOther *BitField) *BitField {
 	}
 	ret := bf.mClone()
 	for i := range ret.data {
-		ret.data[i] = bf.data[i].And(bfOther.data[i])
+		ret.data[i] = ret.data[i].And(bfOther.data[i])
 	}
 	return ret
 }
@@ -205,7 +211,7 @@ func (bf *BitField) Or(bfOther *BitField) *BitField {
 	}
 	ret := bf.mClone()
 	for i := range ret.data {
-		ret.data[i] = bf.data[i].Or(bfOther.data[i])
+		ret.data[i] = ret.data[i].Or(bfOther.data[i])
 	}
 	return ret
 }
@@ -214,7 +220,7 @@ func (bf *BitField) Or(bfOther *BitField) *BitField {
 func (bf *BitField) Not() *BitField {
 	ret := bf.mClone()
 	for i := range bf.data {
-		ret.data[i] = bf.data[i].Not()
+		ret.data[i] = ret.data[i].Not()
 	}
 	return ret.clearEnd()
 }
@@ -226,7 +232,7 @@ func (bf *BitField) Xor(bfOther *BitField) *BitField {
 	}
 	ret := bf.mClone()
 	for i := range bf.data {
-		ret.data[i] = bf.data[i].Xor(bfOther.data[i])
+		ret.data[i] = ret.data[i].Xor(bfOther.data[i])
 	}
 	return ret.clearEnd()
 }
@@ -244,7 +250,7 @@ func (bf *BitField) Equal(bfOther *BitField) bool {
 	return true
 }
 
-// Shift shifts the bitfield by count bits and returns it.
+// Shift shifts thes bitfield by count bits and returns it.
 // If count is positive it shifts towards higher bit positions;
 // If negative it shifts towards lower bit positions.
 // Bits exiting at one end are discarded;

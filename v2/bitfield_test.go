@@ -1,6 +1,7 @@
 package bitfield
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -280,4 +281,35 @@ func Benchmark1(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		New(365).Mut().SetAll()
 	}
+}
+
+func ExampleBitField_Shift_e1() {
+	bf := NewBitField(3).Set(0).Shift(1)
+	fmt.Printf("%v\n", bf.Get(1))
+	// Output: true
+}
+
+func ExampleBitField_Shift_e2() {
+	bf := NewBitField(3).Set(0).Shift(3)
+	fmt.Printf("%d\n", bf.OnesCount())
+	// Output: 0
+}
+
+func ExampleBitField_Clear() {
+	bf := NewBitField(4).SetAll().Clear(0, -1)
+	fmt.Printf("%d\n", bf.OnesCount())
+	// Output: 2
+}
+
+func ExampleBitField_Mut() {
+	bf := NewBitField(4).Set(0).Mut()
+	bf.Set(1)
+	fmt.Printf("with Mut: %d\n", bf.OnesCount())
+
+	bf2 := NewBitField(4).Set(0)
+	bf2.Set(1) // this is set then discarded!
+	fmt.Printf("without Mut: %d\n", bf2.OnesCount())
+	// Output: with Mut: 2
+	// without Mut: 1
+
 }
