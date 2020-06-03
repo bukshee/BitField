@@ -5,11 +5,30 @@ import (
 	"testing"
 )
 
+// test that function call do panic
+func panics(f func()) bool {
+	didPanic := false
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				didPanic = true
+			}
+		}()
+		f()
+	}()
+	return didPanic
+}
+
 func Test1(t *testing.T) {
-	if New(-3) != nil {
-		t.Error("should be nil")
+	if !panics(func() { NewBitField(-3) }) {
+		t.Error("should panic")
 	}
-	if New(0).Len() != 0 {
+
+	if !panics(func() { New(4).Resize(-1) }) {
+		t.Error("should panic")
+	}
+
+	if NewBitField(0).Len() != 0 {
 		t.Error("should be 0")
 	}
 	if New(65).SetAll().OnesCount() != 65 {
@@ -34,14 +53,14 @@ func Test1(t *testing.T) {
 		t.Error("should be 1")
 	}
 
-	if New(5).And(New(121)) != nil {
-		t.Error("should be nil")
+	if !panics(func() { New(5).And(New(121)) }) {
+		t.Error("should panic")
 	}
-	if New(5).Or(New(121)) != nil {
-		t.Error("should be nil")
+	if !panics(func() { New(5).Or(New(121)) }) {
+		t.Error("should panic")
 	}
-	if New(5).Xor(New(121)) != nil {
-		t.Error("should be nil")
+	if !panics(func() { New(5).Xor(New(121)) }) {
+		t.Error("should panic")
 	}
 
 	c := New(129).Set(73, -2).ClearAll().Set(-1)
@@ -83,9 +102,6 @@ func Test1(t *testing.T) {
 }
 
 func Test2(t *testing.T) {
-	if New(4).Resize(-1) != nil {
-		t.Error("should be nil")
-	}
 	if New(4).Resize(0).Len() != 0 {
 		t.Error("should be 0")
 	}
@@ -184,9 +200,24 @@ func TestMid(t *testing.T) {
 		t.Error("should be 3")
 	}
 
-	if New(5).Left(-1) != nil || New(5).Right(-3) != nil {
-		t.Error("should be nil")
+	if !panics(func() {
+		New(5).Left(-1)
+	}) {
+		t.Error("should panic")
 	}
+
+	if !panics(func() {
+		New(5).Right(-1)
+	}) {
+		t.Error("should panic")
+	}
+
+	if !panics(func() {
+		New(10).Mid(3, -1)
+	}) {
+		t.Error("should panic")
+	}
+
 	if !New(65).Set(3).Left(3).Equal(New(3)) {
 		t.Error("should be equal")
 	}
@@ -203,9 +234,7 @@ func TestMid(t *testing.T) {
 	if !a.Equal(b) {
 		t.Error("should be equal")
 	}
-	if New(10).Mid(3, -1) != nil {
-		t.Error("should be nil")
-	}
+
 	if New(4).Left(0).Len() != 0 {
 		t.Error("should be 0")
 	}
@@ -268,9 +297,12 @@ func TestMut(t *testing.T) {
 	}
 
 	a = New(65)
-	if New(5).Copy(a) {
-		t.Error("should be false")
+	if !panics(func() {
+		New(5).Copy(a)
+	}) {
+		t.Error("should panic")
 	}
+
 	New(65).Set(0, -1).Copy(a)
 	if a.OnesCount() != 2 || !a.Get(-1) {
 		t.Error("Copy fails")
@@ -285,7 +317,7 @@ func Benchmark1(b *testing.B) {
 
 func ExampleBitField_Shift_e1() {
 	bf := NewBitField(3).Set(0).Shift(1)
-	fmt.Printf("%v\n", bf.Get(1))
+	fmt.Printf("%t\n", bf.Get(1))
 	// Output: true
 }
 

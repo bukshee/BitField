@@ -34,7 +34,7 @@ func New(len int) *BitField {
 // Returns nil if len<0
 func NewBitField(len int) *BitField {
 	if len < 0 {
-		return nil
+		panic("len cannot be negative")
 	}
 	return &BitField{
 		data:    make(bitFieldData, 1+len/64),
@@ -56,8 +56,8 @@ func (bf *BitField) Mut() *BitField {
 // If newLen < Len() bits are lost at the end.
 // If newLen > Len() the newly added bits will be zeroed.
 func (bf *BitField) Resize(newLen int) *BitField {
-	ret := New(newLen)
-	if newLen <= 0 {
+	ret := NewBitField(newLen)
+	if newLen == 0 {
 		return ret
 	}
 	copy(ret.data, bf.data)
@@ -87,7 +87,7 @@ func (bf *BitField) Clone() *BitField {
 // Returns false if the two bitfields differ in size, true otherwise
 func (bf *BitField) Copy(dest *BitField) bool {
 	if bf.len != dest.len {
-		return false
+		panic("Len() of bf and dest differ")
 	}
 	copy(dest.data, bf.data)
 	return true
@@ -192,10 +192,12 @@ func (bf *BitField) OnesCount() int {
 	return count
 }
 
+const errLenOther = "Len() of bf and bfOther differ"
+
 // And does a binary AND with bfOther. Returns nil if lengths differ. Mutable.
 func (bf *BitField) And(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
-		return nil
+		panic(errLenOther)
 	}
 	ret := bf.mClone()
 	for i := range ret.data {
@@ -207,7 +209,7 @@ func (bf *BitField) And(bfOther *BitField) *BitField {
 // Or does a binary OR with bfOther. Returns nil if lengths differ. Mutable.
 func (bf *BitField) Or(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
-		return nil
+		panic(errLenOther)
 	}
 	ret := bf.mClone()
 	for i := range ret.data {
@@ -228,7 +230,7 @@ func (bf *BitField) Not() *BitField {
 // Xor does a binary XOR with bfOther. Returns nil if lengths differ. Mutable.
 func (bf *BitField) Xor(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
-		return nil
+		panic(errLenOther)
 	}
 	ret := bf.mClone()
 	for i := range bf.data {
@@ -303,7 +305,7 @@ func (bf *BitField) Shift(count int) *BitField {
 func (bf *BitField) Mid(pos, count int) *BitField {
 	switch {
 	case count < 0:
-		return nil
+		panic("count cannot be negative")
 
 	case count == 0:
 		return New(0)
