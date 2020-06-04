@@ -6,7 +6,7 @@ import (
 )
 
 // test that function call do panic
-func panics(f func()) bool {
+func doesPanic(f func()) bool {
 	didPanic := false
 	func() {
 		defer func() {
@@ -20,11 +20,11 @@ func panics(f func()) bool {
 }
 
 func Test1(t *testing.T) {
-	if !panics(func() { NewBitField(-3) }) {
+	if !doesPanic(func() { NewBitField(-3) }) {
 		t.Error("should panic")
 	}
 
-	if !panics(func() { New(4).Resize(-1) }) {
+	if !doesPanic(func() { New(4).Resize(-1) }) {
 		t.Error("should panic")
 	}
 
@@ -37,10 +37,14 @@ func Test1(t *testing.T) {
 	if New(3).Equal(New(4)) {
 		t.Error("should be false")
 	}
-	if !New(3).Set(0, -1).Not().Equal(New(3).Set(1)) {
-		t.Error("should be 1")
+	a := New(3).Set(0, -1).Not()
+	if a.String() != "010" {
+		t.Error("should be 010")
 	}
-	a := New(129).Set(0, -1).Clear(123, -3).Not().Not()
+	if !a.Equal(New(3).Set(1)) {
+		t.Error("should be true")
+	}
+	a = New(129).Set(0, -1).Clear(123, -3).Not().Not()
 	if a.OnesCount() != 2 {
 		t.Error("should be 2")
 	}
@@ -53,13 +57,13 @@ func Test1(t *testing.T) {
 		t.Error("should be 1")
 	}
 
-	if !panics(func() { New(5).And(New(121)) }) {
+	if !doesPanic(func() { New(5).And(New(121)) }) {
 		t.Error("should panic")
 	}
-	if !panics(func() { New(5).Or(New(121)) }) {
+	if !doesPanic(func() { New(5).Or(New(121)) }) {
 		t.Error("should panic")
 	}
-	if !panics(func() { New(5).Xor(New(121)) }) {
+	if !doesPanic(func() { New(5).Xor(New(121)) }) {
 		t.Error("should panic")
 	}
 
@@ -83,8 +87,8 @@ func Test1(t *testing.T) {
 	if !New(4).Flip(-1).Flip(-1).Equal(New(4)) {
 		t.Error("should be equal")
 	}
-	if New(4).SetAll().Flip(0, -1).Mid(1, 2).OnesCount() != 2 {
-		t.Error("should be 2")
+	if New(4).SetAll().Flip(0, -1).Mid(1, 2).String() != "11" {
+		t.Error("should be 00")
 	}
 
 	d := New(65).Set(-1)
@@ -105,14 +109,17 @@ func Test2(t *testing.T) {
 	if New(4).Resize(0).Len() != 0 {
 		t.Error("should be 0")
 	}
-	if New(10).SetAll().Resize(6).OnesCount() != 6 {
-		t.Error("should be 6")
+	if New(1).SetAll().Resize(4).String() != "1000" {
+		t.Error("should be 1000")
+	}
+	if New(10).SetAll().Resize(6).String() != "111111" {
+		t.Error("should be 111111")
 	}
 	if !New(27).Set(0, -1).Resize(65).Get(26) {
 		t.Error("should be true")
 	}
-	if New(65).Set(-1).Resize(45).OnesCount() != 0 {
-		t.Error("should be 0")
+	if New(65).Set(-1).Right(5).String() != "00001" {
+		t.Error("should be 00001")
 	}
 	if New(65).SetAll().Resize(40).OnesCount() != 40 {
 		t.Error("should be 40")
@@ -190,35 +197,45 @@ func TestShift(t *testing.T) {
 				tt.size, tt.shift, c, tt.expected)
 		}
 	}
+
+	a := New(3)
+	a.SetAll().Shift(-1)
+	if a.String() != "000" {
+		t.Error("should be 000")
+	}
+	a.Mut().SetAll().Shift(-1)
+	if a.String() != "110" {
+		t.Error("should be 110")
+	}
 }
 
 func TestMid(t *testing.T) {
-	if !New(5).SetAll().Mid(1, 1).Equal(New(1).Set(0)) {
-		t.Error("should be equal")
+	if New(5).SetAll().Mid(1, 1).String() != "1" {
+		t.Error("should be 1")
 	}
-	if New(121).SetAll().Mid(-3, 3).OnesCount() != 3 {
-		t.Error("should be 3")
+	if New(121).SetAll().Mid(-3, 3).String() != "111" {
+		t.Error("should be 111")
 	}
 
-	if !panics(func() {
+	if !doesPanic(func() {
 		New(5).Left(-1)
 	}) {
 		t.Error("should panic")
 	}
 
-	if !panics(func() {
+	if !doesPanic(func() {
 		New(5).Right(-1)
 	}) {
 		t.Error("should panic")
 	}
 
-	if !panics(func() {
+	if !doesPanic(func() {
 		New(10).Mid(3, -1)
 	}) {
 		t.Error("should panic")
 	}
 
-	if !New(65).Set(3).Left(3).Equal(New(3)) {
+	if New(65).Set(3).Left(3).String() != "000" {
 		t.Error("should be equal")
 	}
 
@@ -238,9 +255,6 @@ func TestMid(t *testing.T) {
 	if New(4).Left(0).Len() != 0 {
 		t.Error("should be 0")
 	}
-	if New(4).SetAll().Mid(-3, 3).OnesCount() != 3 {
-		t.Error("should be 3")
-	}
 }
 
 func TestAppend(t *testing.T) {
@@ -255,13 +269,15 @@ func TestAppend(t *testing.T) {
 	}
 
 	// real cases
-	a = New(10).SetAll().Append(New(3))
-	if a.Len() != 13 || a.OnesCount() != 10 || a.Right(3).OnesCount() != 0 {
+	a = New(3).SetAll().Append(New(3))
+	if a.String() != "111000" {
 		t.Error("Append is wrong")
 	}
 }
 
 func TestRotate(t *testing.T) {
+
+	New(0).Rotate(4)
 
 	a := New(65).Set(63).Rotate(1)
 	if !a.Equal(New(65).Set(64)) {
@@ -281,6 +297,16 @@ func TestRotate(t *testing.T) {
 			t.Errorf("@%d rotate failed", i)
 		}
 	}
+
+	a = New(3).Set(0)
+	a.Rotate(-1) // discarded
+	if a.String() != "100" {
+		t.Error("should be 100")
+	}
+	a.Mut().Rotate(-1)
+	if a.String() != "001" {
+		t.Error("should be 001")
+	}
 }
 
 func TestMut(t *testing.T) {
@@ -297,7 +323,7 @@ func TestMut(t *testing.T) {
 	}
 
 	a = New(65)
-	if !panics(func() {
+	if !doesPanic(func() {
 		New(5).Copy(a)
 	}) {
 		t.Error("should panic")
@@ -310,38 +336,38 @@ func TestMut(t *testing.T) {
 }
 
 func Benchmark1(b *testing.B) {
+	a := New(365)
 	for n := 0; n < b.N; n++ {
-		New(365).Mut().SetAll()
+		a.Set(0)
 	}
 }
 
 func ExampleBitField_Shift_e1() {
 	bf := NewBitField(3).Set(0).Shift(1)
-	fmt.Printf("%t\n", bf.Get(1))
-	// Output: true
+	fmt.Println(bf)
+	// Output: 010
 }
 
 func ExampleBitField_Shift_e2() {
 	bf := NewBitField(3).Set(0).Shift(3)
-	fmt.Printf("%d\n", bf.OnesCount())
-	// Output: 0
+	fmt.Println(bf)
+	// Output: 000
 }
 
 func ExampleBitField_Clear() {
 	bf := NewBitField(4).SetAll().Clear(0, -1)
-	fmt.Printf("%d\n", bf.OnesCount())
-	// Output: 2
+	fmt.Println(bf)
+	// Output: 0110
 }
 
 func ExampleBitField_Mut() {
-	bf := NewBitField(4).Set(0).Mut()
-	bf.Set(1)
-	fmt.Printf("with Mut: %d\n", bf.OnesCount())
+	bf := NewBitField(4).Set(0)
+	bf.Set(1) // this is set then discarded!
+	fmt.Println("without Mut():", bf)
 
-	bf2 := NewBitField(4).Set(0)
-	bf2.Set(1) // this is set then discarded!
-	fmt.Printf("without Mut: %d\n", bf2.OnesCount())
-	// Output: with Mut: 2
-	// without Mut: 1
+	bf.Mut().Set(1)
+	fmt.Println("with Mut():", bf)
+	// Output: without Mut(): 1000
+	// with Mut(): 1100
 
 }

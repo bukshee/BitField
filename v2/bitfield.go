@@ -256,13 +256,12 @@ func (bf *BitField) Equal(bfOther *BitField) bool {
 // If count is positive it shifts towards higher bit positions;
 // If negative it shifts towards lower bit positions.
 // Bits exiting at one end are discarded;
-// bits entering at the other end are zeroed.
+// bits entering at the other end are zeroed. Mutable.
 func (bf *BitField) Shift(count int) *BitField {
+	ret := bf.mClone()
 	if count <= -bf.Len() || count >= bf.Len() {
-		return bf.ClearAll()
+		return ret.ClearAll()
 	}
-
-	ret := bf.Clone()
 
 	const n = 64
 	switch {
@@ -347,18 +346,39 @@ func (bf *BitField) Append(other *BitField) *BitField {
 
 // Rotate rotates by amount bits and returns it
 // If amount>0 it rotates towards higher bit positions,
-// otherwise it rotates towards lower bit positions.
+// otherwise it rotates towards lower bit positions. Mutable.
 func (bf *BitField) Rotate(amount int) *BitField {
-	for amount < bf.Len() {
-		amount += bf.Len()
+	ret := bf.mClone()
+	if bf.len == 0 {
+		return ret
 	}
-	amount %= bf.Len()
+	for amount < 0 {
+		amount += bf.len
+	}
+	amount %= bf.len
 
-	if amount%bf.Len() == 0 {
-		return bf.Clone()
+	if amount%bf.len == 0 {
+		return ret
 	}
 
 	lh := bf.Left(bf.Len() - amount)
 	rh := bf.Right(amount)
-	return rh.Append(lh)
+	rh.Append(lh).Copy(ret)
+	return ret
+}
+
+func (bf *BitField) String() string {
+	const n = 64
+	ret := make([]byte, bf.len)
+	for i := 0; i < len(bf.data); i++ {
+		s := bf.data[i].String()
+		for j := 0; j < len(s); j++ {
+			pos := i*n + j
+			if pos >= bf.len {
+				break
+			}
+			ret[pos] = s[j]
+		}
+	}
+	return string(ret)
 }
