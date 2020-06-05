@@ -31,7 +31,7 @@ func New(len int) *BitField {
 }
 
 // NewBitField creates a new BitField of length len and returns it.
-// Returns nil if len<0
+// Panics if len<0
 func NewBitField(len int) *BitField {
 	if len < 0 {
 		panic("len cannot be negative")
@@ -51,11 +51,8 @@ func (bf *BitField) Mut() *BitField {
 	return bf
 }
 
-// Resize resizes the bitfield to newLen in size.
-// Returns a newly allocated one, leaves the original intact.
-// If newLen < Len() bits are lost at the end.
-// If newLen > Len() the newly added bits will be zeroed.
-func (bf *BitField) Resize(newLen int) *BitField {
+// resize always creates a new bitfield regardless of Mut()
+func (bf *BitField) resize(newLen int) *BitField {
 	ret := NewBitField(newLen)
 	if newLen == 0 {
 		return ret
@@ -63,6 +60,26 @@ func (bf *BitField) Resize(newLen int) *BitField {
 	copy(ret.data, bf.data)
 	if newLen < bf.len {
 		ret.clearEnd()
+	}
+	return ret
+}
+
+// Resize resizes the bitfield to newLen in size.
+// Panics is newLen<0
+// Returns a newly allocated one, leaves the original intact.
+// If newLen < Len() bits are lost at the end.
+// If newLen > Len() the newly added bits will be zeroed.
+// Mutable.
+func (bf *BitField) Resize(newLen int) *BitField {
+	ret := bf.resize(newLen)
+	copy(ret.data, bf.data)
+	if newLen < bf.len {
+		ret.clearEnd()
+	}
+	if bf.mutable {
+		bf.data = ret.data
+		bf.len = ret.len
+		return bf
 	}
 	return ret
 }
@@ -87,7 +104,7 @@ func (bf *BitField) Clone() *BitField {
 // Returns false if the two bitfields differ in size, true otherwise
 func (bf *BitField) Copy(dest *BitField) bool {
 	if bf.len != dest.len {
-		panic("Len() of bf and dest differ")
+		return false
 	}
 	copy(dest.data, bf.data)
 	return true
@@ -194,7 +211,7 @@ func (bf *BitField) OnesCount() int {
 
 const errLenOther = "Len() of bf and bfOther differ"
 
-// And does a binary AND with bfOther. Returns nil if lengths differ. Mutable.
+// And does a binary AND with bfOther. Panics if lengths differ. Mutable.
 func (bf *BitField) And(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
 		panic(errLenOther)
@@ -206,7 +223,7 @@ func (bf *BitField) And(bfOther *BitField) *BitField {
 	return ret
 }
 
-// Or does a binary OR with bfOther. Returns nil if lengths differ. Mutable.
+// Or does a binary OR with bfOther. Panics if lengths differ. Mutable.
 func (bf *BitField) Or(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
 		panic(errLenOther)
@@ -227,7 +244,7 @@ func (bf *BitField) Not() *BitField {
 	return ret.clearEnd()
 }
 
-// Xor does a binary XOR with bfOther. Returns nil if lengths differ. Mutable.
+// Xor does a binary XOR with bfOther. Panics if lengths differ. Mutable.
 func (bf *BitField) Xor(bfOther *BitField) *BitField {
 	if bf.len != bfOther.len {
 		panic(errLenOther)
@@ -300,7 +317,7 @@ func (bf *BitField) Shift(count int) *BitField {
 }
 
 // Mid returns counts bits from position pos as a new BitField
-// Returns nil if count<0
+// Panics if count<0
 func (bf *BitField) Mid(pos, count int) *BitField {
 	switch {
 	case count < 0:
@@ -314,18 +331,18 @@ func (bf *BitField) Mid(pos, count int) *BitField {
 			count = bf.Len()
 		}
 		pos = bf.posNormalize(pos)
-		return bf.Shift(-pos).Resize(count)
+		return bf.Shift(-pos).resize(count)
 	}
 }
 
 // Left returns count bits in the range of [0,count-1] as a new BitField
-// Returns nil if count<0
+// Panics if count<0
 func (bf *BitField) Left(count int) *BitField {
 	return bf.Mid(0, count)
 }
 
 // Right returns count bits in the range of [63-count,63] as a new BitField
-// Returns nil if count<0
+// Panics if count<0
 func (bf *BitField) Right(count int) *BitField {
 	return bf.Mid(bf.Len()-count, count)
 }
@@ -339,9 +356,9 @@ func (bf *BitField) Append(other *BitField) *BitField {
 	len := bf.Len()
 	newLen := len + other.Len()
 	return other.
-		Resize(newLen).
+		resize(newLen).
 		Shift(len).
-		Or(bf.Resize(newLen))
+		Or(bf.resize(newLen))
 }
 
 // Rotate rotates by amount bits and returns it

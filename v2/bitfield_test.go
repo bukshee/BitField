@@ -105,7 +105,7 @@ func Test1(t *testing.T) {
 	}
 }
 
-func Test2(t *testing.T) {
+func TestResize(t *testing.T) {
 	if New(4).Resize(0).Len() != 0 {
 		t.Error("should be 0")
 	}
@@ -123,6 +123,16 @@ func Test2(t *testing.T) {
 	}
 	if New(65).SetAll().Resize(40).OnesCount() != 40 {
 		t.Error("should be 40")
+	}
+
+	a := New(3).SetAll()
+	a.Resize(4)
+	if a.String() != "111" {
+		t.Error("should be 111")
+	}
+	a.Mut().Resize(4)
+	if a.String() != "1110" {
+		t.Error("should be 1110")
 	}
 }
 
@@ -323,10 +333,9 @@ func TestMut(t *testing.T) {
 	}
 
 	a = New(65)
-	if !doesPanic(func() {
-		New(5).Copy(a)
-	}) {
-		t.Error("should panic")
+
+	if New(5).Copy(a) {
+		t.Error("should return false")
 	}
 
 	New(65).Set(0, -1).Copy(a)
