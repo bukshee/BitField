@@ -250,13 +250,10 @@ func TestMid(t *testing.T) {
 func TestAppend(t *testing.T) {
 	// trivial cases
 	a := New(0).Append(New(0))
-	if !a.Equal(New(0)) {
-		t.Error("should be equal")
-	}
+	assert(t, a.Equal(New(0)), true)
+
 	a = New(0).Append(New(1))
-	if !a.Equal(New(1)) {
-		t.Error("should be equal")
-	}
+	assert(t, a.Equal(New(1)), true)
 
 	// real cases
 	a = New(3).SetAll().Append(New(3))
@@ -265,7 +262,7 @@ func TestAppend(t *testing.T) {
 
 func TestRotate(t *testing.T) {
 
-	New(0).Rotate(4)
+	assert(t, New(0).Rotate(4).Len(), 0)
 
 	a := New(65).Set(63).Rotate(1)
 	assert(t, a.Equal(New(65).Set(64)), true)

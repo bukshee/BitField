@@ -4,14 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [2.2.0] - 2020-06-05
 ### Added
 - String
 
 ### Changed
-- Shift(), Rotate() and Resize() now Mutable.
+- Shift(), Rotate() and Resize() are now Mutable.
 - Copy() does not panic if length differ: it returns false.
 - panic()s if arguments are not as expected.
+
+### Fixed
+-Right(): when count>len
 
 ## [2.1.0] - 2020-06-02
 ### Added
