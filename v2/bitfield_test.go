@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+func assert(t *testing.T, a, b interface{}) {
+	if a == b {
+		return
+	}
+	t.Helper()
+	t.Errorf("%s != %s", a, b)
+}
+
 // test that function call do panic
 func doesPanic(f func()) bool {
 	didPanic := false
@@ -28,26 +36,24 @@ func Test1(t *testing.T) {
 		t.Error("should panic")
 	}
 
-	if NewBitField(0).Len() != 0 {
-		t.Error("should be 0")
-	}
-	if New(65).SetAll().OnesCount() != 65 {
-		t.Error("should be 65")
-	}
+	a := NewBitField(0)
+	assert(t, a.Len(), 0)
+
+	a = New(65).SetAll()
+	assert(t, a.OnesCount(), 65)
+
 	if New(3).Equal(New(4)) {
 		t.Error("should be false")
 	}
-	a := New(3).Set(0, -1).Not()
-	if a.String() != "010" {
-		t.Error("should be 010")
-	}
+	a = New(3).Set(0, -1).Not()
+	assert(t, a.String(), "010")
+
 	if !a.Equal(New(3).Set(1)) {
 		t.Error("should be true")
 	}
 	a = New(129).Set(0, -1).Clear(123, -3).Not().Not()
-	if a.OnesCount() != 2 {
-		t.Error("should be 2")
-	}
+	assert(t, a.OnesCount(), 2)
+
 	if !a.Get(0) || !a.Get(-a.Len()) || !a.Get(a.Len()) {
 		t.Error("should be true")
 	}
@@ -81,59 +87,58 @@ func Test1(t *testing.T) {
 		t.Error("should be true")
 	}
 
-	if !New(4).Flip(-1).Equal(New(4).Set(-1)) {
-		t.Error("should be equal")
-	}
-	if !New(4).Flip(-1).Flip(-1).Equal(New(4)) {
-		t.Error("should be equal")
-	}
-	if New(4).SetAll().Flip(0, -1).Mid(1, 2).String() != "11" {
-		t.Error("should be 00")
-	}
+	a = New(4).Flip(-1)
+	assert(t, a.String(), "0001")
+
+	a = New(4).Flip(-1).Flip(-1)
+	assert(t, a.String(), "0000")
+
+	a = New(4).SetAll().Flip(0, -1).Mid(1, 2)
+	assert(t, a.String(), "11")
 
 	d := New(65).Set(-1)
 	e := d.Clone()
 	if !d.Equal(e) {
 		t.Error("should be equal")
 	}
-	if d.Xor(d).OnesCount() != 0 {
-		t.Error("should be 0")
-	}
 
-	if !d.Set(11).Or(e).Get(11) {
-		t.Error("should be true")
-	}
+	assert(t, d.Xor(d).OnesCount(), 0)
+
+	assert(t, d.Set(11).Or(e).Get(11), true)
 }
 
 func TestResize(t *testing.T) {
 	if New(4).Resize(0).Len() != 0 {
 		t.Error("should be 0")
 	}
-	if New(1).SetAll().Resize(4).String() != "1000" {
-		t.Error("should be 1000")
-	}
-	if New(10).SetAll().Resize(6).String() != "111111" {
-		t.Error("should be 111111")
-	}
-	if !New(27).Set(0, -1).Resize(65).Get(26) {
-		t.Error("should be true")
-	}
-	if New(65).Set(-1).Right(5).String() != "00001" {
-		t.Error("should be 00001")
-	}
-	if New(65).SetAll().Resize(40).OnesCount() != 40 {
-		t.Error("should be 40")
-	}
+	a := New(3)
+	a.Resize(3).Set(1)
+	assert(t, a.String(), "000")
 
-	a := New(3).SetAll()
+	a.Mut().Resize(3).Set(1)
+	assert(t, a.String(), "010")
+
+	a = New(1).SetAll().Resize(4)
+	assert(t, a.String(), "1000")
+
+	a = New(10).SetAll().Resize(6)
+	assert(t, a.String(), "111111")
+
+	a = New(27).Set(0, -1).Resize(65)
+	assert(t, a.Get(26), true)
+
+	a = New(65).Set(-1).Right(5)
+	assert(t, a.String(), "00001")
+
+	a = New(65).SetAll().Resize(40)
+	assert(t, a.OnesCount(), 40)
+
+	a = New(3).SetAll()
 	a.Resize(4)
-	if a.String() != "111" {
-		t.Error("should be 111")
-	}
+	assert(t, a.String(), "111")
+
 	a.Mut().Resize(4)
-	if a.String() != "1110" {
-		t.Error("should be 1110")
-	}
+	assert(t, a.String(), "1110")
 }
 
 func TestPrivate1(t *testing.T) {
@@ -151,11 +156,7 @@ func TestPrivate1(t *testing.T) {
 
 	for _, tt := range tests {
 		res := New(tt.size).posNormalize(tt.pos)
-		if res == tt.expected {
-			continue
-		}
-		t.Errorf("New(%d).posNormalize(%d) should map to %d. Got: %d",
-			tt.size, tt.pos, tt.expected, res)
+		assert(t, res, tt.expected)
 	}
 }
 
@@ -210,22 +211,18 @@ func TestShift(t *testing.T) {
 
 	a := New(3)
 	a.SetAll().Shift(-1)
-	if a.String() != "000" {
-		t.Error("should be 000")
-	}
+	assert(t, a.String(), "000")
+
 	a.Mut().SetAll().Shift(-1)
-	if a.String() != "110" {
-		t.Error("should be 110")
-	}
+	assert(t, a.String(), "110")
 }
 
 func TestMid(t *testing.T) {
-	if New(5).SetAll().Mid(1, 1).String() != "1" {
-		t.Error("should be 1")
-	}
-	if New(121).SetAll().Mid(-3, 3).String() != "111" {
-		t.Error("should be 111")
-	}
+	a := New(5).SetAll().Mid(1, 1)
+	assert(t, a.String(), "1")
+
+	a = New(121).SetAll().Mid(-3, 3)
+	assert(t, a.String(), "111")
 
 	if !doesPanic(func() {
 		New(5).Left(-1)
@@ -245,11 +242,10 @@ func TestMid(t *testing.T) {
 		t.Error("should panic")
 	}
 
-	if New(65).Set(3).Left(3).String() != "000" {
-		t.Error("should be equal")
-	}
+	a = New(65).Set(3).Left(3)
+	assert(t, a.String(), "000")
 
-	a := New(60).SetAll().Right(10)
+	a = New(60).SetAll().Right(10)
 	b := New(10).SetAll()
 
 	if !a.Equal(b) {
@@ -280,9 +276,7 @@ func TestAppend(t *testing.T) {
 
 	// real cases
 	a = New(3).SetAll().Append(New(3))
-	if a.String() != "111000" {
-		t.Error("Append is wrong")
-	}
+	assert(t, a.String(), "111000")
 }
 
 func TestRotate(t *testing.T) {
@@ -310,33 +304,23 @@ func TestRotate(t *testing.T) {
 
 	a = New(3).Set(0)
 	a.Rotate(-1) // discarded
-	if a.String() != "100" {
-		t.Error("should be 100")
-	}
+	assert(t, a.String(), "100")
+
 	a.Mut().Rotate(-1)
-	if a.String() != "001" {
-		t.Error("should be 001")
-	}
+	assert(t, a.String(), "001")
 }
 
 func TestMut(t *testing.T) {
 	a := New(65).Mut()
 	a.SetAll().Clear(0, -1).Flip(3, 4)
-	if a.OnesCount() != 61 {
-		t.Error("should be 61")
-	}
+	assert(t, a.OnesCount(), 61)
 
 	a = New(65).Mut().SetAll()
 	a.Xor(a)
-	if a.OnesCount() != 0 {
-		t.Error("should be 0")
-	}
+	assert(t, a.OnesCount(), 0)
 
 	a = New(65)
-
-	if New(5).Copy(a) {
-		t.Error("should return false")
-	}
+	assert(t, New(5).Copy(a), false)
 
 	New(65).Set(0, -1).Copy(a)
 	if a.OnesCount() != 2 || !a.Get(-1) {
