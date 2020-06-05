@@ -344,6 +344,9 @@ func (bf *BitField) Left(count int) *BitField {
 // Right returns count bits in the range of [63-count,63] as a new BitField
 // Panics if count<0
 func (bf *BitField) Right(count int) *BitField {
+	if count > bf.len {
+		count = bf.len
+	}
 	return bf.Mid(bf.Len()-count, count)
 }
 
