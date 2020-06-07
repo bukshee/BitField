@@ -1,8 +1,9 @@
-package bitfield
+package bitfield_test
 
 import (
 	"fmt"
 	"testing"
+	. "github.com/bukshee/bitfield/v2"
 )
 
 func assert(t *testing.T, a, b interface{}) {
@@ -44,6 +45,7 @@ func Test1(t *testing.T) {
 
 	assert(t, New(3).Equal(New(4)), false)
 
+	New(3).Set()
 	a = New(3).Set(0, -1).Not()
 	assert(t, a.String(), "010")
 
@@ -129,47 +131,6 @@ func TestResize(t *testing.T) {
 
 	a.Mut().Resize(4)
 	assert(t, a.String(), "1110")
-}
-
-func TestPrivate1(t *testing.T) {
-	tests := []struct {
-		size     int // input
-		pos      int //input
-		expected int //output
-	}{
-		{67, -2, 65},
-		{121, 121, 0},
-		{3, -10, 2},
-		{0, 2, 0},
-		{0, 4, 0},
-	}
-
-	for _, tt := range tests {
-		res := New(tt.size).posNormalize(tt.pos)
-		assert(t, res, tt.expected)
-	}
-}
-
-func TestPrivate2(t *testing.T) {
-	tests := []struct {
-		size        int // input
-		offset      int // input
-		expectedIx  int // output
-		expectedPos int // output
-	}{
-		{65, 64, 1, 0},
-		{3, -1, 0, 2},
-		{65, -1, 1, 0},
-	}
-
-	for _, tt := range tests {
-		ix, p := New(tt.size).posToOffset(tt.offset)
-		if ix == tt.expectedIx && p == tt.expectedPos {
-			continue
-		}
-		t.Errorf("New(%d).posToOffset(%d) should map to [%d,%d]. Got: [%d,%d]",
-			tt.size, tt.offset, tt.expectedIx, tt.expectedPos, ix, p)
-	}
 }
 
 func TestShift(t *testing.T) {
