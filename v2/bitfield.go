@@ -1,26 +1,21 @@
 /*
-Package bitfield is slice of bitfield64-s to make it possible to store more
-than 64 bits. Most functions are chainable, positions outside the [0,len) range
-will get the modulo treatment, so Get(len) will return the 0th bit, Get(-1) will
-return the last bit: Get(len-1)
+Package bitfield is for storing and manipulating bit-data.
 
-Most methods do not modify the underlying bitfield but create a new and return that.
-You can change this behaviour by calling .Mut() method. In this case all methods
-explicitely marked as 'Mutable.' will be modified in-place. This reduced allocations
-(for cases where speed does matter).
+There are two structs defined: BitField64 is in case you want to store
+64 or less bits, while BitField is for storing arbitrary number of bits.
 */
 package bitfield
 
-import (
-	bf64 "github.com/bukshee/bitfield64"
-)
-
-// bitFieldData is a slice of BitField64-s.
-type bitFieldData []bf64.BitField64
-
 // BitField is a flexible size version of BitField64.
+// Most functions are chainable, positions outside the [0,len) range
+// will get the modulo treatment, so Get(len) will return the 0th bit, Get(-1) will
+// return the last bit: Get(len-1)
+// Most methods do not modify the underlying bitfield but create a new and return that.
+// You can change this behaviour by calling .Mut() method. In this case all methods
+// explicitely marked as 'Mutable.' will be modified in-place. This reduced allocations
+// (for cases where speed does matter).
 type BitField struct {
-	data    bitFieldData
+	data    []BitField64
 	len     int
 	mutable bool
 }
@@ -37,7 +32,7 @@ func NewBitField(len int) *BitField {
 		panic("len cannot be negative")
 	}
 	return &BitField{
-		data:    make(bitFieldData, 1+len/64),
+		data:    make([]BitField64, 1+len/64),
 		len:     len,
 		mutable: false,
 	}
@@ -287,7 +282,7 @@ func (bf *BitField) Shift(count int) *BitField {
 	case count > 0:
 		ix, delta := count/n, count%n
 		for i := len(ret.data) - 1; i >= 0; i-- {
-			tmp := bf64.New()
+			tmp := New64()
 			if i-ix >= 0 {
 				tmp = ret.data[i-ix]
 			}
@@ -302,7 +297,7 @@ func (bf *BitField) Shift(count int) *BitField {
 	case count < 0:
 		ix, delta := -count/n, -count%n
 		for i := 0; i < len(ret.data); i++ {
-			tmp := bf64.New()
+			tmp := New64()
 			if i+ix < len(ret.data) {
 				tmp = ret.data[i+ix]
 			}
