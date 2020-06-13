@@ -7,13 +7,15 @@ There are two structs defined: BitField64 is in case you want to store
 package bitfield
 
 // BitField is a flexible size version of BitField64.
+//
 // Most functions are chainable, positions outside the [0,len) range
-// will get the modulo treatment, so Get(len) will return the 0th bit, Get(-1) will
-// return the last bit: Get(len-1)
-// Most methods do not modify the underlying bitfield but create a new and return that.
-// You can change this behaviour by calling .Mut() method. In this case all methods
-// explicitely marked as 'Mutable.' will be modified in-place. This reduced allocations
-// (for cases where speed does matter).
+// will get the modulo treatment, so Get(len) will return the 0th bit, Get(-1)
+// will return the last bit: Get(len-1)
+//
+// Most methods do not modify the underlying bitfield but create a new and
+// return that. You can change this behaviour by calling .Mut() method. In this
+// case all methods explicitely marked as 'Mutable.' will be modified in-place.
+// This reduces allocations (for cases where speed does matter).
 type BitField struct {
 	data    []BitField64
 	len     int

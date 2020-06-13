@@ -7,7 +7,9 @@ import (
 
 // BitField64 is a simple, quick, stack-based bit-field manipulator
 // for 64 bits (or less) in length.
+//
 // Methods are stateless and free from side-effects.
+//
 // It was designed to be chainable. Range for position must be [0, 63]. position
 // outside this range will get the modulo treatment, so 64 will point to the 0th
 // element, -1 will address the last element (i.e. 63rd), -2 the one before
@@ -134,9 +136,9 @@ func (bf64 BitField64) Right(count int) BitField64 {
 	return bf64.Mid(n-count, count)
 }
 
-// Rotate rotates by count bits: Bits exiting at one end entering at the other end.
-// If count is positive it rotates towards higher positions; If negative it rotates
-// towards lower positions.
+// Rotate rotates by count bits: Bits exiting at one end entering at the other
+// end. If count is positive it rotates towards higher positions; If negative it
+// rotates towards lower positions.
 func (bf64 BitField64) Rotate(count int) BitField64 {
 	if count == 0 {
 		return bf64
@@ -146,8 +148,8 @@ func (bf64 BitField64) Rotate(count int) BitField64 {
 
 // Shift shift bits by count positions. Bits exiting at one end are discarded;
 // bits entering at the other end are zeroed.
-// If count is positive it shifts towards higher positions; If negative it shifts
-// towards lower positions.
+// If count is positive it shifts towards higher positions; If negative it
+// shifts towards lower positions.
 func (bf64 BitField64) Shift(count int) BitField64 {
 	if count == 0 {
 		return bf64
